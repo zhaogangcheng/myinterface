@@ -146,7 +146,7 @@ public static String getHomeSession( HttpClient httpClient, String loginsession)
 	        
 	        try {  
 	                // 执行getMethod  
-	            	Thread.sleep(500);
+	            	//Thread.sleep(500);
 	              int statusCode = httpClient.executeMethod(getMethod);  
 	                
 	              String result =   getMethod.getResponseBodyAsString();
@@ -189,7 +189,7 @@ public static String getHomeSession( HttpClient httpClient, String loginsession)
 	        GetMethod getMethod = new GetMethod("http://travel.ceair.com/validateCode.vld?29");  
 	            try {  
 	                // 执行getMethod  
-	            	Thread.sleep(500);
+	            	//Thread.sleep(500);
 	                int statusCode = httpClient.executeMethod(getMethod);  
 	                if (statusCode != HttpStatus.SC_OK) {  
 	                    System.err.println("Method failed: "  
@@ -246,7 +246,7 @@ public static String getHomeSession( HttpClient httpClient, String loginsession)
 	        
 	        try {  
 	                // 执行getMethod  
-	            	Thread.sleep(500);
+	            	//Thread.sleep(500);
 	                int statusCode = httpClient.executeMethod(getMethod);  
 	                
 	              String result =   getMethod.getResponseBodyAsString();

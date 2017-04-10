@@ -35,6 +35,7 @@ import cn.springmvc.login.Login;
 import cn.springmvc.util.ExportExcel;
 import cn.springmvc.util.FourExcelZip;
 import cn.springmvc.util.HttpConnectionClient;
+import cn.springmvc.util.Md5Util;
 import cn.springmvc.util.PropertiesUtil;
 import cn.springmvc.util.ZipUtil;
 import cn.springmvc.vo.DhQueryVo;
@@ -43,6 +44,7 @@ import cn.springmvc.vo.ExcelVo;
 import cn.springmvc.vo.FlightInfoVO;
 import cn.springmvc.vo.HBMap;
 import cn.springmvc.vo.HQQueryVo;
+import cn.springmvc.vo.InterfaceVo;
 
 @Controller
 @RequestMapping("/dh")
@@ -51,6 +53,115 @@ public class DhController {
 	
 	//List<ExcelVo> resultListss=  new LinkedList<ExcelVo>();
 	Map<String,String> codeMap =  HBMap.getMap();
+	
+	private Map<String, String> sessionMap = new HashMap<String, String>();
+	
+	/**
+	 * 获取不同的航班消息
+	 *  1.预计部署在固定IP云服务器，设定一个简单请求校验，比如CID=COMETOURS 等，
+		2.返回现有的解析数据，最好为JSON格式
+		3.登录要保持长连接，登录失效了，自动登录
+		4.请求参数如下：
+		  routeType：旅行类型（单程，往返）
+		  adtCount：乘客数量
+		  depDate:出发日期
+		  retDate：到达日期
+		  depAirpCd：出发机场
+		  arrAirpCd：到达机场
+		5.要留地方配置账号、密码
+		6.预计最大查询量1秒1次，不排除查询量过大的情况，要为多线程设计，或者多进程/负载均衡 部署留点空间。
+	 * 
+	 * @param request
+	 * @param response
+	 * @param vo
+	 * @return
+	 */
+	
+	@ResponseBody
+	@RequestMapping(value="/dhInterface",method={RequestMethod.POST })
+	public Map<String, Object> dhInterface(HttpServletRequest request,  HttpServletResponse response,InterfaceVo vo){
+		if(vo==null){
+			logger.error("传递的vo为空");
+		}
+		
+		Map<String,Object> map = new HashMap<String,Object>();  
+		
+		//先从map中获取 session，然后去做查询，如果没有就需要登录，如果获取到了 还需要去做校验看有没有过期
+		// 如果过期 需要重新登录
+		String username = vo.getUsername();
+		String password = vo.getPassword();
+		password = Md5Util.md5(password);
+		String jsessionid = sessionMap.get(username);
+		if(StringUtils.isBlank(jsessionid)){
+			try {
+				jsessionid = Login.getLoginJessionId(username,password);
+				while("error".equals(jsessionid)){
+					jsessionid = Login.getLoginJessionId(username,password);
+				}
+			} catch (Exception e) {
+				e.printStackTrace(); 
+			}
+		}else{
+			
+			//TODO 需要做session校验
+		}
+		
+		//保存session 下次使用
+		sessionMap.put(username, jsessionid);
+		
+		
+		//单程 还是往返 判断
+		
+		//单程 ODOW
+		String routeType = vo.getRouteType();
+		String adtCount = vo.getAdtCount();
+		String depDate = vo.getDepDate();
+		String retDate = vo.getRetDate();
+		String depAirpCd = vo.getDepAirpCd();
+		String arrAirpCd = vo.getArrAirpCd();
+		if("ODOW".equals(routeType)){
+			
+			List<ExcelVo> allList = new LinkedList<ExcelVo>();
+			List<ExcelVo> resultExcelList = getDomMsg(depAirpCd,arrAirpCd,depDate,jsessionid);
+			allList.addAll(resultExcelList);
+			logger.info("==获取数据完成==");
+			//将list中重复的数据重新组装
+			allList = getonlyList(allList);
+			//去掉list www的
+			allList = distinctAllList(allList);
+			//时间组装成2016-09-09~2016-09-09
+			allList = riqichongfu(allList);
+			
+			if(allList==null||allList.size()<=0){
+				return null;
+			}
+		//往返 ODRT
+		}else if("ODRT".equals(routeType)){
+			
+			List<ExcelVo> allList = new LinkedList<ExcelVo>();
+			List<ExcelVo> resultExcelList = getDomMsgInterface(routeType,adtCount,depAirpCd,arrAirpCd,depDate,retDate,jsessionid);
+			allList.addAll(resultExcelList);
+			logger.info("==获取数据完成==");
+			//将list中重复的数据重新组装
+			allList = getonlyList(allList);
+			//去掉list www的
+			allList = distinctAllList(allList);
+			//时间组装成2016-09-09~2016-09-09
+			allList = riqichongfu(allList);
+			
+			if(allList==null||allList.size()<=0){
+				return null;
+			}
+			
+		}
+		
+		
+		
+		
+		map.put("code", "200");
+	    return map;
+	}
+	
 	
 	
 	@ResponseBody
@@ -578,7 +689,50 @@ public class DhController {
 		return resultExcelList;
 	}
 	
-	
+	public List<ExcelVo> getDomMsgInterface(String dancheng ,String renshu, String from, String arrive,String startdate,String endDate,String jsessionid){
+		List<ExcelVo> resultExcelList = new LinkedList<ExcelVo>();
+		String url =null;
+		String msg = "";
+		HttpConnectionClient httpClient = new HttpConnectionClient();
+		url = "http://781.ceair.com/bookingmanage/booking_bookodAjaxSearch.do?isIT=true";
+		NameValuePair[] nvps = {new NameValuePair("routeType", dancheng),new NameValuePair("flightOrder", "0"),new NameValuePair("cabinLevel", "\"\""),new NameValuePair("adtCount", renshu),new NameValuePair("kamno", "\"\""),new NameValuePair("retDate", startdate),new NameValuePair("depDate", endDate),new NameValuePair("arrAirpCd", arrive),new NameValuePair("depAirpCd", from),new NameValuePair("segIndex", "0") };
+		try{
+			msg= httpClient.getContextByPostMethod3(url,nvps,"JSESSIONID="+jsessionid);
+		}catch(Exception e){
+			logger.error("通過接口去數據出錯：url=="+"from:"+from+"|arrive:"+arrive+"|endDate:"+endDate+"|jsessionid:"+jsessionid);
+			logger.error("通過接口去數據出錯：结果=="+"resultExcelList:"+resultExcelList);
+			try {
+				
+				msg= httpClient.getContextByPostMethod3(url,nvps,"JSESSIONID="+jsessionid);
+				logger.error("前面失败第一次重试成功，：url=="+"from:"+from+"|arrive:"+arrive+"|endDate:"+endDate+"|jsessionid:"+jsessionid);
+			} catch (Exception e2) {
+				logger.error("==重试1==通過接口去數據出錯：url=="+"from:"+from+"|arrive:"+arrive+"|endDate:"+endDate+"|jsessionid:"+jsessionid);
+				logger.error("==重试1==通過接口去數據出錯：结果=="+"resultExcelList:"+resultExcelList);
+				
+				try {
+					msg= httpClient.getContextByPostMethod3(url,nvps,"JSESSIONID="+jsessionid);
+					logger.error("前面失败第二次重试成功，：url=="+"from:"+from+"|arrive:"+arrive+"|endDate:"+endDate+"|jsessionid:"+jsessionid);
+				} catch (Exception e3) {
+					logger.error("==重试2==通過接口去數據出錯：url=="+"from:"+from+"|arrive:"+arrive+"|endDate:"+endDate+"|jsessionid:"+jsessionid);
+					logger.error("==重试2==通過接口去數據出錯：结果=="+"resultExcelList:"+resultExcelList);
+					
+					try {
+						msg= httpClient.getContextByPostMethod3(url,nvps,"JSESSIONID="+jsessionid);
+						logger.error("前面失败第三次重试成功，：url=="+"from:"+from+"|arrive:"+arrive+"|endDate:"+endDate+"|jsessionid:"+jsessionid);
+					} catch (Exception e4) {
+						logger.error("==重试3==通過接口去數據出錯：url=="+"from:"+from+"|arrive:"+arrive+"|endDate:"+endDate+"|jsessionid:"+jsessionid);
+						logger.error("==重试3==通過接口去數據出錯：结果=="+"resultExcelList:"+resultExcelList);
+					}
+				}
+				
+			}
+		}
+		//解析dom
+		List<DiscountFlightInfoVo> resultList = parseDOMInterface(msg,from,arrive,startdate,endDate);
+		//转换要导出的数据
+		resultExcelList = convertVo(resultList);
+		return resultExcelList;
+	}
 	
 	//将日期转换
 	private  List<String> getListDay(Calendar startDay, Calendar endDay) {  
@@ -749,6 +903,69 @@ public class DhController {
 	    return map;
 	}
 	
+	
+	public List<DiscountFlightInfoVo> parseDOMInterface(String msg,String from, String arrive,String startdate, String riqi){
+		//字符串解析
+		List<DiscountFlightInfoVo> resultList=  new LinkedList<DiscountFlightInfoVo>();
+		Document doc = Jsoup.parse(msg);
+		Elements odsearchresult_boxs = doc.getElementsByClass("odsearchresult_box");
+		if(odsearchresult_boxs!=null&&odsearchresult_boxs.size()>0){
+			for(int i=0;i<odsearchresult_boxs.size();i++){
+				Element e = odsearchresult_boxs.get(i);
+				DiscountFlightInfoVo  discInfoVo = new DiscountFlightInfoVo();
+				discInfoVo.setFrom(from);
+				discInfoVo.setArrive(arrive);
+				discInfoVo.setRiqi(riqi);
+				//1:获取tr
+				Elements trs =  e.getElementsByTag("tr");
+				Elements firstTds = null;
+				Elements secondTds = null;
+				Element firstTr =null;
+				Element secondTr =null;
+				if(trs!=null&&trs.size()==2){
+					firstTr = trs.get(0);
+					firstTds = firstTr.getElementsByTag("td");
+					secondTr = trs.get(1);
+					secondTds = secondTr.getElementsByTag("td");
+				}
+				
+				//2：获取td
+				if(firstTds!=null&&firstTds.size()>0){
+					//first  1:MU5122 2:H舱  3:333 4:17:55  5:北京 首都机场  6:20:10  7: 上海 虹桥机场   8:隔日中转  9 剩余座位  10票面价： 12 最后价格
+						discInfoVo.setFirstFlightCode(firstTds.get(1).text());
+						discInfoVo.setFirstFlightSpace(firstTds.get(2).getElementsByTag("span").text());
+						discInfoVo.setFirstFlightNum(firstTds.get(3).getElementsByTag("span").text());
+						discInfoVo.setFirstFlightStartFlyTime(firstTds.get(4).getElementsByTag("strong").text());
+						discInfoVo.setFirstFlightStartFlyAddress(firstTds.get(5).text());
+						discInfoVo.setFirstFlightArrivedTime(firstTds.get(6).text());
+						discInfoVo.setFirstFlightArrivedAddress(firstTds.get(7).text());
+						discInfoVo.setFirstFlightISTomorrow(firstTds.get(8).getElementsByTag("span").get(0).text());
+						discInfoVo.setFirstFlightLeftSeat(firstTds.get(9).getElementsByTag("span").get(0).text());
+						discInfoVo.setFirstFlightSVGPrice(firstTds.get(10).getElementsByTag("strong").text());
+						String priceHtml = firstTds.get(12).getElementsByTag("input").attr("onclick");
+						int m = priceHtml.lastIndexOf(")");
+						int n = priceHtml.lastIndexOf(",");
+						String price = priceHtml.substring(n+2, m-1);
+						discInfoVo.setFirstFlightLastPrice(price);
+				}
+				
+				 
+				if(secondTds!=null&&secondTds.size()>0){
+					//second 1： MU583   2：N舱  3：773 4：13:00  5：上海 浦东机场   6： 10:05   7：洛杉矶 洛杉矶国际机场
+						discInfoVo.setSecondFlightCode(secondTds.get(1).text());
+						discInfoVo.setSecondFlightSpace(secondTds.get(2).getElementsByTag("span").text());
+						discInfoVo.setSecondFlightNum(secondTds.get(3).getElementsByTag("span").text());
+						discInfoVo.setSecondFlightStartFlyTime(secondTds.get(4).text());
+						discInfoVo.setSecondFlightStartFlyAddress(secondTds.get(5).text());
+						discInfoVo.setSecondFlightArrivedTime(secondTds.get(6).getElementsByTag("strong").text());
+						discInfoVo.setSecondFlightArrivedAddress(secondTds.get(7).text());
+				}
+				
+				resultList.add(discInfoVo);
+			}
+		}
+		return resultList;
+	}
 	
 	
 	public List<DiscountFlightInfoVo> parseDOM(String msg,String from, String arrive, String riqi){
