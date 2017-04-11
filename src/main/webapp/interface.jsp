@@ -92,7 +92,7 @@ String basePath = request.getScheme()+"://"+request.getServerName()+":"+request.
 		ODOW
  */
 		
-		var data={"routeType":"ODRT","adtCount":"1","depDate":"2017-04-22","retDate":"2017-04-29","depAirpCd":"PEK","arrAirpCd":"SIN","username":"hnkt","password":"123456"};  
+		var data={"routeType":"ODOW","adtCount":"1","depDate":"2017-04-26","retDate":"2017-04-29","depAirpCd":"SYX","arrAirpCd":"ICN","username":"hnkt","password":"123456"};  
 		$.ajax({
             type: "post",
             url: "./dh/dhInterface",

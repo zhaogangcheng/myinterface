@@ -13,6 +13,8 @@ public class InterfaceFlightVo {
 	private String firstFlightArrivedTime;
 	private String firstFlightArrivedAddress;
 	private String firstFlightISTomorrow;
+	private String firstFlightISTomorrowHour;
+	private String firstFlightFlyHour;
 	private String firstFlightLeftSeat;
 	private String firstFlightSVGPrice;
 	private String firstFlightLastPrice;
@@ -33,6 +35,8 @@ public class InterfaceFlightVo {
 	private String xfirstFlightArrivedTime;
 	private String xfirstFlightArrivedAddress;
 	private String xfirstFlightISTomorrow;
+	private String xfirstFlightISTomorrowHour;
+	private String xfirstFlightFlyHour;
 	private String xfirstFlightLeftSeat;
 	private String xsecondFlightCode;
 	private String xsecondFlightSpace;
@@ -286,6 +290,30 @@ public class InterfaceFlightVo {
 	}
 	public void setEnddate(String enddate) {
 		this.enddate = enddate;
+	}
+	public String getFirstFlightISTomorrowHour() {
+		return firstFlightISTomorrowHour;
+	}
+	public void setFirstFlightISTomorrowHour(String firstFlightISTomorrowHour) {
+		this.firstFlightISTomorrowHour = firstFlightISTomorrowHour;
+	}
+	public String getXfirstFlightISTomorrowHour() {
+		return xfirstFlightISTomorrowHour;
+	}
+	public void setXfirstFlightISTomorrowHour(String xfirstFlightISTomorrowHour) {
+		this.xfirstFlightISTomorrowHour = xfirstFlightISTomorrowHour;
+	}
+	public String getFirstFlightFlyHour() {
+		return firstFlightFlyHour;
+	}
+	public void setFirstFlightFlyHour(String firstFlightFlyHour) {
+		this.firstFlightFlyHour = firstFlightFlyHour;
+	}
+	public String getXfirstFlightFlyHour() {
+		return xfirstFlightFlyHour;
+	}
+	public void setXfirstFlightFlyHour(String xfirstFlightFlyHour) {
+		this.xfirstFlightFlyHour = xfirstFlightFlyHour;
 	}
 	
 	

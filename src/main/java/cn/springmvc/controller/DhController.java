@@ -44,7 +44,10 @@ import cn.springmvc.vo.ExcelVo;
 import cn.springmvc.vo.FlightInfoVO;
 import cn.springmvc.vo.HBMap;
 import cn.springmvc.vo.HQQueryVo;
+import cn.springmvc.vo.InterfaceFlightVo;
+import cn.springmvc.vo.InterfaceResultVo;
 import cn.springmvc.vo.InterfaceVo;
+import cn.springmvc.vo.SessionVo;
 
 @Controller
 @RequestMapping("/dh")
@@ -54,7 +57,7 @@ public class DhController {
 	//List<ExcelVo> resultListss=  new LinkedList<ExcelVo>();
 	Map<String,String> codeMap =  HBMap.getMap();
 	
-	private Map<String, String> sessionMap = new HashMap<String, String>();
+	private Map<String, SessionVo> sessionMap = new HashMap<String, SessionVo>();
 	
 	/**
 	 * 获取不同的航班消息
@@ -91,24 +94,30 @@ public class DhController {
 		String username = vo.getUsername();
 		String password = vo.getPassword();
 		password = Md5Util.md5(password);
-		String jsessionid = sessionMap.get(username);
-		if(StringUtils.isBlank(jsessionid)){
-			try {
-				jsessionid = Login.getLoginJessionId(username,password);
-				while("error".equals(jsessionid)){
+		
+		
+		//每个用户 在我sessionmap中只能存活10分钟，超过十分钟的就要重新登录。通过时间来判断
+		SessionVo sv = sessionMap.get(username);
+		
+		 boolean isNeedLoginFlag = isNeedLogin(sv);
+		
+		String jsessionid = "";
+		if(isNeedLoginFlag){
+				try {
 					jsessionid = Login.getLoginJessionId(username,password);
+					while("error".equals(jsessionid)){
+						jsessionid = Login.getLoginJessionId(username,password);
+					}
+					SessionVo	sv1 = new SessionVo();
+					sv1.setSessionDate(new Date());
+					sv1.setSessionId(jsessionid);
+					sessionMap.put(username, sv1);
+				} catch (Exception e) {
+					e.printStackTrace(); 
 				}
-			} catch (Exception e) {
-				e.printStackTrace(); 
-			}
 		}else{
-			
-			//TODO 需要做session校验
+			jsessionid = sv.getSessionId();
 		}
-		
-		//保存session 下次使用
-		sessionMap.put(username, jsessionid);
-		
 		
 		//单程 还是往返 判断
 		
@@ -119,47 +128,132 @@ public class DhController {
 		String retDate = vo.getRetDate();
 		String depAirpCd = vo.getDepAirpCd();
 		String arrAirpCd = vo.getArrAirpCd();
+		
+		List<InterfaceResultVo> allListResult = new LinkedList<InterfaceResultVo>();
 		if("ODOW".equals(routeType)){
-			
-			List<ExcelVo> allList = new LinkedList<ExcelVo>();
-			List<ExcelVo> resultExcelList = getDomMsg(depAirpCd,arrAirpCd,depDate,jsessionid);
-			allList.addAll(resultExcelList);
-			logger.info("==获取数据完成==");
-			//将list中重复的数据重新组装
-			allList = getonlyList(allList);
-			//去掉list www的
-			allList = distinctAllList(allList);
-			//时间组装成2016-09-09~2016-09-09
-			allList = riqichongfu(allList);
-			
-			if(allList==null||allList.size()<=0){
-				return null;
+			List<DiscountFlightInfoVo> resultExcelList = getDomMsgSingle(depAirpCd,arrAirpCd,depDate,jsessionid);
+			if(resultExcelList!=null){
+				allListResult = convertInterfaceResultSingle(resultExcelList);
 			}
 		//往返 ODRT
 		}else if("ODRT".equals(routeType)){
-			
-			List<ExcelVo> allList = new LinkedList<ExcelVo>();
-			List<ExcelVo> resultExcelList = getDomMsgInterface(routeType,adtCount,depAirpCd,arrAirpCd,depDate,retDate,jsessionid);
-			allList.addAll(resultExcelList);
-			logger.info("==获取数据完成==");
-			//将list中重复的数据重新组装
-			allList = getonlyList(allList);
-			//去掉list www的
-			allList = distinctAllList(allList);
-			//时间组装成2016-09-09~2016-09-09
-			allList = riqichongfu(allList);
-			
-			if(allList==null||allList.size()<=0){
-				return null;
+			List<InterfaceFlightVo> resultExcelList = getDomMsgInterfaceDouble(routeType,adtCount,depAirpCd,arrAirpCd,depDate,retDate,jsessionid);
+			if(resultExcelList!=null){
+				allListResult = convertInterfaceResultDouble(resultExcelList);
 			}
+		}
+		map.put("code", "200");
+		map.put("result", allListResult);
+	    return map;
+	}
+	
+	private List<InterfaceResultVo> convertInterfaceResultSingle(List<DiscountFlightInfoVo> resultExcelList){
+		List<InterfaceResultVo> result = new LinkedList<InterfaceResultVo>();
+		if(resultExcelList==null){
+			return result;
+		}
+		for(int i=0;i<resultExcelList.size();i++){
+			InterfaceResultVo vo = new InterfaceResultVo();
+			DiscountFlightInfoVo v = resultExcelList.get(i);
+			vo.setGofirstArrivedAddress(v.getFirstFlightArrivedAddress());
+			vo.setGofirstArrivedTime(v.getFirstFlightArrivedTime());
+			vo.setGofirstCode(v.getFirstFlightCode());
+			//vo.setGofirstFlyHour(null);
+			vo.setGofirstISTomorrow(v.getFirstFlightISTomorrow());
+			//vo.setGofirstISTomorrowHour(null);
+			vo.setGofirstLastPrice(v.getFirstFlightLastPrice());
+			vo.setGofirstLeftSeat(v.getFirstFlightLeftSeat());
+			vo.setGofirstNum(v.getFirstFlightNum());
+			vo.setGofirstSpace(v.getFirstFlightSpace());
+			vo.setGofirstStartFlyAddress(v.getFirstFlightStartFlyAddress());
+			vo.setGofirstStartFlyTime(v.getFirstFlightStartFlyTime());
+			vo.setGofirstSVGPrice(v.getFirstFlightSVGPrice());
+			vo.setGosecondArrivedAddress(v.getSecondFlightArrivedAddress());
+			vo.setGosecondArrivedTime(v.getSecondFlightArrivedTime());
+			vo.setGosecondCode(v.getSecondFlightCode());
+			vo.setGosecondNum(v.getSecondFlightNum());
+			vo.setGosecondSpace(v.getSecondFlightSpace());
+			vo.setGosecondStartFlyAddress(v.getSecondFlightStartFlyAddress());
+			vo.setGosecondStartFlyTime(v.getSecondFlightStartFlyTime());
+			result.add(vo);
+		}
+		return result;
+	}
+	
+	private List<InterfaceResultVo> convertInterfaceResultDouble(List<InterfaceFlightVo> resultExcelList){
+		List<InterfaceResultVo> result = new LinkedList<InterfaceResultVo>();
+		if(resultExcelList==null){
+			return result;
+		}
+		for(int i=0;i<resultExcelList.size();i++){
+			InterfaceResultVo vo = new InterfaceResultVo();
+			InterfaceFlightVo v = resultExcelList.get(i);
+			vo.setGofirstArrivedAddress(v.getFirstFlightArrivedAddress());
+			vo.setGofirstArrivedTime(v.getFirstFlightArrivedTime());
+			vo.setGofirstCode(v.getFirstFlightCode());
+			vo.setGofirstFlyHour(v.getFirstFlightFlyHour());
+			vo.setGofirstISTomorrow(v.getFirstFlightISTomorrow());
+			vo.setGofirstISTomorrowHour(v.getFirstFlightISTomorrowHour());
+			vo.setGofirstLastPrice(v.getFirstFlightLastPrice());
+			vo.setGofirstLeftSeat(v.getFirstFlightLeftSeat());
+			vo.setGofirstNum(v.getFirstFlightNum());
+			vo.setGofirstSpace(v.getFirstFlightSpace());
+			vo.setGofirstStartFlyAddress(v.getFirstFlightStartFlyAddress());
+			vo.setGofirstStartFlyTime(v.getFirstFlightStartFlyTime());
+			vo.setGofirstSVGPrice(v.getFirstFlightSVGPrice());
+			vo.setGosecondArrivedAddress(v.getSecondFlightArrivedAddress());
+			vo.setGosecondArrivedTime(v.getSecondFlightArrivedTime());
+			vo.setGosecondCode(v.getSecondFlightCode());
+			vo.setGosecondNum(v.getSecondFlightNum());
+			vo.setGosecondSpace(v.getSecondFlightSpace());
+			vo.setGosecondStartFlyAddress(v.getSecondFlightStartFlyAddress());
+			vo.setGosecondStartFlyTime(v.getSecondFlightStartFlyTime());
 			
+			vo.setBackfirstArrivedAddress(v.getXfirstFlightArrivedAddress());
+			vo.setBackfirstArrivedTime(v.getXfirstFlightArrivedTime());
+			vo.setBackfirstCode(v.getXfirstFlightCode());
+			vo.setBackfirstFlyHour(v.getXfirstFlightFlyHour());
+			vo.setBackfirstISTomorrow(v.getXfirstFlightISTomorrow());
+			vo.setBackfirstISTomorrowHour(v.getXfirstFlightISTomorrowHour());
+			vo.setBackfirstLeftSeat(v.getXfirstFlightLeftSeat());
+			vo.setBackfirstNum(v.getXfirstFlightNum());
+			vo.setBackfirstSpace(v.getXfirstFlightSpace());
+			vo.setBackfirstStartFlyAddress(v.getXfirstFlightStartFlyAddress());
+			vo.setBackfirstStartFlyTime(v.getXfirstFlightStartFlyTime());
+			vo.setBacksecondArrivedAddress(v.getXsecondFlightArrivedAddress());
+			vo.setBacksecondArrivedTime(v.getXsecondFlightArrivedTime());
+			vo.setBacksecondCode(v.getXsecondFlightCode());
+			vo.setBacksecondNum(v.getXsecondFlightNum());
+			vo.setBacksecondSpace(v.getXsecondFlightSpace());
+			vo.setBacksecondStartFlyAddress(v.getXsecondFlightStartFlyAddress());
+			vo.setBacksecondStartFlyTime(v.getXsecondFlightStartFlyTime());
+			result.add(vo);
+		}
+		return result;
+	}
+	
+	
+	private boolean isNeedLogin(SessionVo vo){
+		if(vo ==null){
+			return true;
 		}
 		
+		if(StringUtils.isBlank(vo.getSessionId())){
+			return true;
+		}
 		
+		if(vo.getSessionDate()==null){
+			return true;
+		}
 		
-		
-		map.put("code", "200");
-	    return map;
+		Date oldDate = vo.getSessionDate();
+		Date nowDate = new Date();
+		long seconds = nowDate.getTime() - oldDate.getTime();
+		long min = seconds/1000/60 ;
+		if(min>10){
+			return true;
+		}
+		return false;
 	}
 	
 	
@@ -689,49 +783,83 @@ public class DhController {
 		return resultExcelList;
 	}
 	
-	public List<ExcelVo> getDomMsgInterface(String dancheng ,String renshu, String from, String arrive,String startdate,String endDate,String jsessionid){
-		List<ExcelVo> resultExcelList = new LinkedList<ExcelVo>();
+	public List<DiscountFlightInfoVo> getDomMsgSingle(String from, String arrive,String endDate,String jsessionid){
 		String url =null;
 		String msg = "";
 		HttpConnectionClient httpClient = new HttpConnectionClient();
 		url = "http://781.ceair.com/bookingmanage/booking_bookodAjaxSearch.do?isIT=true";
-		NameValuePair[] nvps = {new NameValuePair("routeType", dancheng),new NameValuePair("flightOrder", "0"),new NameValuePair("cabinLevel", "\"\""),new NameValuePair("adtCount", renshu),new NameValuePair("kamno", "\"\""),new NameValuePair("retDate", startdate),new NameValuePair("depDate", endDate),new NameValuePair("arrAirpCd", arrive),new NameValuePair("depAirpCd", from),new NameValuePair("segIndex", "0") };
+		NameValuePair[] nvps = {new NameValuePair("routeType", "ODOW"),new NameValuePair("flightOrder", "0"),new NameValuePair("cabinLevel", "\"\""),new NameValuePair("adtCount", "1"),new NameValuePair("kamno", "\"\""),new NameValuePair("retDate", "\"\""),new NameValuePair("depDate", endDate),new NameValuePair("arrAirpCd", arrive),new NameValuePair("depAirpCd", from),new NameValuePair("segIndex", "0") };
 		try{
 			msg= httpClient.getContextByPostMethod3(url,nvps,"JSESSIONID="+jsessionid);
 		}catch(Exception e){
 			logger.error("通過接口去數據出錯：url=="+"from:"+from+"|arrive:"+arrive+"|endDate:"+endDate+"|jsessionid:"+jsessionid);
-			logger.error("通過接口去數據出錯：结果=="+"resultExcelList:"+resultExcelList);
 			try {
 				
 				msg= httpClient.getContextByPostMethod3(url,nvps,"JSESSIONID="+jsessionid);
 				logger.error("前面失败第一次重试成功，：url=="+"from:"+from+"|arrive:"+arrive+"|endDate:"+endDate+"|jsessionid:"+jsessionid);
 			} catch (Exception e2) {
 				logger.error("==重试1==通過接口去數據出錯：url=="+"from:"+from+"|arrive:"+arrive+"|endDate:"+endDate+"|jsessionid:"+jsessionid);
-				logger.error("==重试1==通過接口去數據出錯：结果=="+"resultExcelList:"+resultExcelList);
 				
 				try {
 					msg= httpClient.getContextByPostMethod3(url,nvps,"JSESSIONID="+jsessionid);
 					logger.error("前面失败第二次重试成功，：url=="+"from:"+from+"|arrive:"+arrive+"|endDate:"+endDate+"|jsessionid:"+jsessionid);
 				} catch (Exception e3) {
 					logger.error("==重试2==通過接口去數據出錯：url=="+"from:"+from+"|arrive:"+arrive+"|endDate:"+endDate+"|jsessionid:"+jsessionid);
-					logger.error("==重试2==通過接口去數據出錯：结果=="+"resultExcelList:"+resultExcelList);
 					
 					try {
 						msg= httpClient.getContextByPostMethod3(url,nvps,"JSESSIONID="+jsessionid);
 						logger.error("前面失败第三次重试成功，：url=="+"from:"+from+"|arrive:"+arrive+"|endDate:"+endDate+"|jsessionid:"+jsessionid);
 					} catch (Exception e4) {
 						logger.error("==重试3==通過接口去數據出錯：url=="+"from:"+from+"|arrive:"+arrive+"|endDate:"+endDate+"|jsessionid:"+jsessionid);
-						logger.error("==重试3==通過接口去數據出錯：结果=="+"resultExcelList:"+resultExcelList);
 					}
 				}
 				
 			}
 		}
 		//解析dom
-		List<DiscountFlightInfoVo> resultList = parseDOMInterface(msg,from,arrive,startdate,endDate);
+		List<DiscountFlightInfoVo> resultList = parseDOM(msg,from,arrive,endDate);
+		return resultList==null?new LinkedList<DiscountFlightInfoVo>():resultList;
+	}
+	
+	public List<InterfaceFlightVo> getDomMsgInterfaceDouble(String dancheng ,String renshu, String from, String arrive,String startdate,String endDate,String jsessionid){
+		//List<ExcelVo> resultExcelList = new LinkedList<ExcelVo>();
+		String url =null;
+		String msg = "";
+		HttpConnectionClient httpClient = new HttpConnectionClient();
+		url = "http://781.ceair.com/bookingmanage/booking_bookodAjaxSearch.do?isIT=true";
+		NameValuePair[] nvps = {new NameValuePair("routeType", dancheng),new NameValuePair("flightOrder", "0"),new NameValuePair("cabinLevel", "\"\""),new NameValuePair("adtCount", renshu),new NameValuePair("kamno", "\"\""),new NameValuePair("retDate", endDate),new NameValuePair("depDate", startdate),new NameValuePair("arrAirpCd", arrive),new NameValuePair("depAirpCd", from),new NameValuePair("segIndex", "0") };
+		try{
+			msg= httpClient.getContextByPostMethod3(url,nvps,"JSESSIONID="+jsessionid);
+		}catch(Exception e){
+			logger.error("通過接口去數據出錯：url=="+"from:"+from+"|arrive:"+arrive+"|endDate:"+endDate+"|jsessionid:"+jsessionid);
+			try {
+				
+				msg= httpClient.getContextByPostMethod3(url,nvps,"JSESSIONID="+jsessionid);
+				logger.error("前面失败第一次重试成功，：url=="+"from:"+from+"|arrive:"+arrive+"|endDate:"+endDate+"|jsessionid:"+jsessionid);
+			} catch (Exception e2) {
+				logger.error("==重试1==通過接口去數據出錯：url=="+"from:"+from+"|arrive:"+arrive+"|endDate:"+endDate+"|jsessionid:"+jsessionid);
+				
+				try {
+					msg= httpClient.getContextByPostMethod3(url,nvps,"JSESSIONID="+jsessionid);
+					logger.error("前面失败第二次重试成功，：url=="+"from:"+from+"|arrive:"+arrive+"|endDate:"+endDate+"|jsessionid:"+jsessionid);
+				} catch (Exception e3) {
+					logger.error("==重试2==通過接口去數據出錯：url=="+"from:"+from+"|arrive:"+arrive+"|endDate:"+endDate+"|jsessionid:"+jsessionid);
+					
+					try {
+						msg= httpClient.getContextByPostMethod3(url,nvps,"JSESSIONID="+jsessionid);
+						logger.error("前面失败第三次重试成功，：url=="+"from:"+from+"|arrive:"+arrive+"|endDate:"+endDate+"|jsessionid:"+jsessionid);
+					} catch (Exception e4) {
+						logger.error("==重试3==通過接口去數據出錯：url=="+"from:"+from+"|arrive:"+arrive+"|endDate:"+endDate+"|jsessionid:"+jsessionid);
+					}
+				}
+				
+			}
+		}
+		//解析dom
+		List<InterfaceFlightVo> resultList = parseDOMInterface(msg,from,arrive,startdate,endDate);
 		//转换要导出的数据
-		resultExcelList = convertVo(resultList);
-		return resultExcelList;
+		//resultExcelList = convertInterfaceVo(resultList);
+		return resultList==null?new LinkedList<InterfaceFlightVo>():resultList ;
 	}
 	
 	//将日期转换
@@ -875,6 +1003,105 @@ public class DhController {
 	}
 	
 	
+	//将dom数据解析成excle结构数据
+		public List<ExcelVo> convertInterfaceVo(List<InterfaceFlightVo> resultList){
+			if(resultList==null||resultList.size()<=0){
+				return new LinkedList<ExcelVo>();
+			}
+			
+	 		PropertiesUtil pu = new PropertiesUtil();
+			String hb = pu.getProperty("fiter_class");
+			String[] filtergb = {}; 
+			if(StringUtils.isNotBlank(hb)){
+				filtergb = hb.split("/");
+			}
+			
+			List<ExcelVo> excelLists = new LinkedList<ExcelVo>();
+			//将数据过滤组装
+			for(int i=0;i<resultList.size();i++){
+				ExcelVo vo = new ExcelVo();
+				InterfaceFlightVo dvo = resultList.get(i);
+				String firstchangwei = dvo.getFirstFlightSpace().substring(0,1);
+				String secondchangwei = dvo.getSecondFlightSpace().substring(0,1);
+				
+				boolean flag = false;
+				if(filtergb!=null&&filtergb.length>0){
+					for(int k=0;k<filtergb.length;k++){
+						if(filtergb[k].equals(firstchangwei)||filtergb[k].equals(secondchangwei)){
+							flag = true;
+							break;					
+							}
+					}
+				}
+				
+				if(flag){
+					continue;
+				}
+				//I舱 Z舱 排除
+				/*if("I".equals(firstchangwei)||"I".equals(secondchangwei)||"Z".equals(firstchangwei)||"Z".equals(secondchangwei)){
+					continue;
+				}*/
+				
+				//中转机场不为同一个 排除
+				String firstFlightArrivedAddress = dvo.getFirstFlightArrivedAddress();
+				String secondFlightStartFlyAddress = dvo.getSecondFlightStartFlyAddress();
+				if(!firstFlightArrivedAddress.equals(secondFlightStartFlyAddress)){
+					continue;
+				}
+				
+				//获取中转机场的代码
+				String[] zhongzhuanAll = firstFlightArrivedAddress.split(" ");
+				
+				String zhongzhuancode = "";
+				 for (Map.Entry<String, String> entry : codeMap.entrySet()) {
+					 	if(zhongzhuanAll.length>1){
+					 		
+					 		if(zhongzhuanAll[0].equals(entry.getValue())){
+					 			zhongzhuancode = entry.getKey();
+					 			break;
+					 		}else if(zhongzhuanAll[1].indexOf(entry.getValue())>=0){ 
+					 			zhongzhuancode = entry.getKey(); 
+					 			break; 
+					 		}else{
+					 			String fuzhacode = zhongzhuanAll[0]+zhongzhuanAll[1].substring(0,2);
+					 			if(fuzhacode.equals(entry.getValue())){
+					 				zhongzhuancode = entry.getKey();
+						 			break;
+					 			}
+					 		}
+					 	}else if(zhongzhuanAll.length==1){
+					 		if(zhongzhuanAll[0].equals(entry.getValue())){
+					 			zhongzhuancode = entry.getKey();
+					 			break;
+					 		}
+					 	}
+					}
+				 
+				 if(StringUtils.isBlank(zhongzhuancode)){
+					 zhongzhuancode="中转code获取失败";
+				 }
+				
+				
+				String changwei = firstchangwei+"+"+secondchangwei;
+				String hangban = dvo.getFirstFlightCode()+"/"+dvo.getSecondFlightCode();
+				String hanglu = dvo.getFrom()+"-"+zhongzhuancode+"-"+dvo.getArrive();
+				String jiage = dvo.getFirstFlightLastPrice();
+				jiage = jiage.substring(0,jiage.indexOf("."));
+				//String riqi = dvo.getRiqi();
+				String zhongzhuan = dvo.getFirstFlightISTomorrow().indexOf("隔日中转")>=0?"是":"否";
+				vo.setChangwei(changwei);
+				vo.setHangban(hangban);
+				vo.setHanglu(hanglu);
+				vo.setJiage(jiage);
+				//vo.setRiqi(riqi);
+				vo.setZhongzhuan(zhongzhuan);
+				excelLists.add(vo);
+			}
+			
+			return excelLists;
+		}
+	
+	
 	@ResponseBody
 	@RequestMapping(value="/getdhtejia/{jsessionid}",method={RequestMethod.GET })
 	public Map<String, Object> getdhtejia(@PathVariable String jsessionid){
@@ -904,29 +1131,40 @@ public class DhController {
 	}
 	
 	
-	public List<DiscountFlightInfoVo> parseDOMInterface(String msg,String from, String arrive,String startdate, String riqi){
+	public List<InterfaceFlightVo> parseDOMInterface(String msg,String from, String arrive,String startdate, String enddate){
 		//字符串解析
-		List<DiscountFlightInfoVo> resultList=  new LinkedList<DiscountFlightInfoVo>();
+		List<InterfaceFlightVo> resultList=  new LinkedList<InterfaceFlightVo>();
 		Document doc = Jsoup.parse(msg);
 		Elements odsearchresult_boxs = doc.getElementsByClass("odsearchresult_box");
 		if(odsearchresult_boxs!=null&&odsearchresult_boxs.size()>0){
 			for(int i=0;i<odsearchresult_boxs.size();i++){
 				Element e = odsearchresult_boxs.get(i);
-				DiscountFlightInfoVo  discInfoVo = new DiscountFlightInfoVo();
+				InterfaceFlightVo  discInfoVo = new InterfaceFlightVo();
 				discInfoVo.setFrom(from);
 				discInfoVo.setArrive(arrive);
-				discInfoVo.setRiqi(riqi);
+				discInfoVo.setStartdate(startdate);
+				discInfoVo.setEnddate(enddate);
+				
 				//1:获取tr
 				Elements trs =  e.getElementsByTag("tr");
 				Elements firstTds = null;
 				Elements secondTds = null;
+				Elements thirdTds = null;
+				Elements fouthTds = null;
 				Element firstTr =null;
 				Element secondTr =null;
-				if(trs!=null&&trs.size()==2){
+				Element thirdTr =null;
+				Element fouthTr =null;
+				if(trs!=null&&trs.size()==4){
 					firstTr = trs.get(0);
 					firstTds = firstTr.getElementsByTag("td");
 					secondTr = trs.get(1);
 					secondTds = secondTr.getElementsByTag("td");
+					thirdTr = trs.get(2);
+					thirdTds = thirdTr.getElementsByTag("td");
+					fouthTr = trs.get(3);
+					fouthTds = fouthTr.getElementsByTag("td");
+					
 				}
 				
 				//2：获取td
@@ -939,7 +1177,16 @@ public class DhController {
 						discInfoVo.setFirstFlightStartFlyAddress(firstTds.get(5).text());
 						discInfoVo.setFirstFlightArrivedTime(firstTds.get(6).text());
 						discInfoVo.setFirstFlightArrivedAddress(firstTds.get(7).text());
+						//中转时间记录下来
+						String zhongzhuanall = firstTds.get(8).getElementsByTag("span").get(0).text();
+						if("隔日中转".equals(zhongzhuanall)){
+							discInfoVo.setFirstFlightISTomorrowHour("0");
+						}else{
+							int m = zhongzhuanall.indexOf("中转 :");
+							discInfoVo.setFirstFlightISTomorrowHour(zhongzhuanall.substring(m));
+						}
 						discInfoVo.setFirstFlightISTomorrow(firstTds.get(8).getElementsByTag("span").get(0).text());
+						discInfoVo.setFirstFlightFlyHour(firstTds.get(8).getElementsByTag("span").get(1).text());
 						discInfoVo.setFirstFlightLeftSeat(firstTds.get(9).getElementsByTag("span").get(0).text());
 						discInfoVo.setFirstFlightSVGPrice(firstTds.get(10).getElementsByTag("strong").text());
 						String priceHtml = firstTds.get(12).getElementsByTag("input").attr("onclick");
@@ -961,6 +1208,39 @@ public class DhController {
 						discInfoVo.setSecondFlightArrivedAddress(secondTds.get(7).text());
 				}
 				
+				//3：获取td
+				if(thirdTds!=null&&thirdTds.size()>0){
+					//first  1:MU5122 2:H舱  3:333 4:17:55  5:北京 首都机场  6:20:10  7: 上海 虹桥机场   8:隔日中转  9 剩余座位  10票面价： 12 最后价格
+						discInfoVo.setXfirstFlightCode(thirdTds.get(1).text());
+						discInfoVo.setXfirstFlightSpace(thirdTds.get(2).getElementsByTag("span").text());
+						discInfoVo.setXfirstFlightNum(thirdTds.get(3).getElementsByTag("span").text());
+						discInfoVo.setXfirstFlightStartFlyTime(thirdTds.get(4).text());
+						discInfoVo.setXfirstFlightStartFlyAddress(thirdTds.get(5).text());
+						discInfoVo.setXfirstFlightArrivedTime(thirdTds.get(6).getElementsByTag("strong").text());
+						discInfoVo.setXfirstFlightArrivedAddress(thirdTds.get(7).text());
+						//中转时间记录下来
+						String zhongzhuanall = thirdTds.get(8).getElementsByTag("span").get(0).text();
+						if("隔日中转".equals(zhongzhuanall)){
+							discInfoVo.setXfirstFlightISTomorrowHour("0");
+						}else{
+							int m = zhongzhuanall.indexOf("中转 :");
+							discInfoVo.setXfirstFlightISTomorrowHour(zhongzhuanall.substring(m));
+						}
+						discInfoVo.setXfirstFlightISTomorrow(thirdTds.get(8).getElementsByTag("span").get(0).text());
+						discInfoVo.setXfirstFlightFlyHour(thirdTds.get(8).getElementsByTag("span").get(1).text());
+				}
+				
+				 //4fouthTds
+				if(fouthTds!=null&&fouthTds.size()>0){
+					//second 1： MU583   2：N舱  3：773 4：13:00  5：上海 浦东机场   6： 10:05   7：洛杉矶 洛杉矶国际机场
+						discInfoVo.setXsecondFlightCode(fouthTds.get(1).text());
+						discInfoVo.setXsecondFlightSpace(fouthTds.get(2).getElementsByTag("span").text());
+						discInfoVo.setSecondFlightNum(fouthTds.get(3).getElementsByTag("span").text());
+						discInfoVo.setXsecondFlightStartFlyTime(fouthTds.get(4).text());
+						discInfoVo.setXsecondFlightStartFlyAddress(fouthTds.get(5).text());
+						discInfoVo.setXsecondFlightArrivedTime(fouthTds.get(6).getElementsByTag("strong").text());
+						discInfoVo.setXsecondFlightArrivedAddress(fouthTds.get(7).text());
+				}
 				resultList.add(discInfoVo);
 			}
 		}
