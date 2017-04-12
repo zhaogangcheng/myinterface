@@ -60,7 +60,7 @@ public class Login {
               
             String result = "";
 			try {
-				result = ValidateCode.OcrImage(new FileInputStream(new File("D:\\zhanghan\\yzm\\yzm.jpg")));
+				result = ValidateCode.OcrImage(new FileInputStream(new File("E:\\zhanghan\\yzm\\yzm.jpg")));
 			} catch (FileNotFoundException e) {
 				e.printStackTrace();
 			}
@@ -212,7 +212,7 @@ public static String getHomeSession( HttpClient httpClient, String loginsession)
 	                    System.out.println(" - " + cookies[i].toExternalForm());  
 	                }  
 	                */
-	                String picName = "D:\\zhanghan\\yzm\\yzm.jpg";  
+	                String picName = "E:\\zhanghan\\yzm\\yzm.jpg";  
 	                InputStream inputStream = getMethod.getResponseBodyAsStream();  
 	                OutputStream outStream = new FileOutputStream(picName);  
 	                IOUtils.copy(inputStream, outStream);  

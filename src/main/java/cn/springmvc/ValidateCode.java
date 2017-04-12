@@ -443,11 +443,11 @@ public class ValidateCode {
                 //BufferedImage read = ImageIO.read(new ByteArrayInputStream(tmp));
                 
         		BufferedImage read = ImageIO.read(new FileInputStream(new File("D:\\yzm\\yzm.jpg")));
-        		//ImageIO.write(read, "jpg", new File("D:\\zhanghan\\yzm\\yzm.jpg"));
+        		//ImageIO.write(read, "jpg", new File("E:\\zhanghan\\yzm\\yzm.jpg"));
         		BufferedImage read2 = removeBackgroud1(read);
        		    read2 = grayImage(read2);
        		    read2 = erzhihuaImage(read2);
-       		    ImageIO.write(read2, "jpg", new File("D:\\yzm\\yzm_chuli.jpg"));
+       		    ImageIO.write(read2, "jpg", new File("E:\\yzm\\yzm_chuli.jpg"));
         		
             } finally {
                // getMethod.releaseConnection();
