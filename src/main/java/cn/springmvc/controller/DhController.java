@@ -105,8 +105,15 @@ public class DhController {
 		if(isNeedLoginFlag){
 				try {
 					jsessionid = Login.getLoginJessionId(username,password);
+					int m = 0;
 					while("error".equals(jsessionid)){
+						++m;
+						if(m>=5){
+							Thread thread = new Thread();
+							thread.sleep(500);
+						}
 						jsessionid = Login.getLoginJessionId(username,password);
+					
 					}
 					SessionVo	sv1 = new SessionVo();
 					sv1.setSessionDate(new Date());
@@ -137,10 +144,15 @@ public class DhController {
 			}
 		//往返 ODRT
 		}else if("ODRT".equals(routeType)){
-			List<InterfaceFlightVo> resultExcelList = getDomMsgInterfaceDouble(routeType,adtCount,depAirpCd,arrAirpCd,depDate,retDate,jsessionid);
-			if(resultExcelList!=null){
-				allListResult = convertInterfaceResultDouble(resultExcelList);
+			try {
+				List<InterfaceFlightVo> resultExcelList = getDomMsgInterfaceDouble(routeType,adtCount,depAirpCd,arrAirpCd,depDate,retDate,jsessionid);
+				if(resultExcelList!=null){
+					allListResult = convertInterfaceResultDouble(resultExcelList);
+				}
+			} catch (Exception e) {
+				logger.error("在往返ODRT中错误"+e.getMessage());
 			}
+		
 		}
 		map.put("code", "200");
 		map.put("result", allListResult);
@@ -856,7 +868,14 @@ public class DhController {
 			}
 		}
 		//解析dom
-		List<InterfaceFlightVo> resultList = parseDOMInterface(msg,from,arrive,startdate,endDate);
+		List<InterfaceFlightVo> resultList =new LinkedList<InterfaceFlightVo>();
+		try {
+			 resultList = parseDOMInterface(msg,from,arrive,startdate,endDate);
+		} catch (Exception e) {
+			logger.error("解析dom报错"+e.getMessage());
+		}
+		
+		logger.info("最终获取数据的条数:"+resultList.size());
 		//转换要导出的数据
 		//resultExcelList = convertInterfaceVo(resultList);
 		return resultList==null?new LinkedList<InterfaceFlightVo>():resultList ;
@@ -1133,6 +1152,7 @@ public class DhController {
 	
 	public List<InterfaceFlightVo> parseDOMInterface(String msg,String from, String arrive,String startdate, String enddate){
 		//字符串解析
+		logger.info("msg：length:"+msg.length());
 		List<InterfaceFlightVo> resultList=  new LinkedList<InterfaceFlightVo>();
 		Document doc = Jsoup.parse(msg);
 		Elements odsearchresult_boxs = doc.getElementsByClass("odsearchresult_box");
