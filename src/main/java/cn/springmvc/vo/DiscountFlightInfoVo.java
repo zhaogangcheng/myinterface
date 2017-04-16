@@ -13,6 +13,8 @@ public class DiscountFlightInfoVo {
 	private String firstFlightArrivedTime;
 	private String firstFlightArrivedAddress;
 	private String firstFlightISTomorrow;
+	private String firstFlightISTomorrowHour;
+	private String firstFlightFlyHour;
 	private String firstFlightLeftSeat;
 	private String firstFlightSVGPrice;
 	private String firstFlightLastPrice;
@@ -168,6 +170,18 @@ public class DiscountFlightInfoVo {
 	}
 	public void setSecondFlightArrivedAddress(String secondFlightArrivedAddress) {
 		this.secondFlightArrivedAddress = secondFlightArrivedAddress;
+	}
+	public String getFirstFlightISTomorrowHour() {
+		return firstFlightISTomorrowHour;
+	}
+	public void setFirstFlightISTomorrowHour(String firstFlightISTomorrowHour) {
+		this.firstFlightISTomorrowHour = firstFlightISTomorrowHour;
+	}
+	public String getFirstFlightFlyHour() {
+		return firstFlightFlyHour;
+	}
+	public void setFirstFlightFlyHour(String firstFlightFlyHour) {
+		this.firstFlightFlyHour = firstFlightFlyHour;
 	}
 	
 	

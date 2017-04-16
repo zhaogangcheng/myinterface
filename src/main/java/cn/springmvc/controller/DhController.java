@@ -170,9 +170,9 @@ public class DhController {
 			vo.setGofirstArrivedAddress(v.getFirstFlightArrivedAddress());
 			vo.setGofirstArrivedTime(v.getFirstFlightArrivedTime());
 			vo.setGofirstCode(v.getFirstFlightCode());
-			//vo.setGofirstFlyHour(null);
+			vo.setGofirstFlyHour(v.getFirstFlightFlyHour());
 			vo.setGofirstISTomorrow(v.getFirstFlightISTomorrow());
-			//vo.setGofirstISTomorrowHour(null);
+			vo.setGofirstISTomorrowHour(v.getFirstFlightISTomorrowHour());
 			vo.setGofirstLastPrice(v.getFirstFlightLastPrice());
 			vo.setGofirstLeftSeat(v.getFirstFlightLeftSeat());
 			vo.setGofirstNum(v.getFirstFlightNum());
@@ -1202,8 +1202,8 @@ public class DhController {
 						if("隔日中转".equals(zhongzhuanall)){
 							discInfoVo.setFirstFlightISTomorrowHour("0");
 						}else{
-							int m = zhongzhuanall.indexOf("中转 :");
-							discInfoVo.setFirstFlightISTomorrowHour(zhongzhuanall.substring(m));
+							int m = zhongzhuanall.indexOf(":");
+							discInfoVo.setFirstFlightISTomorrowHour(zhongzhuanall.substring(m+1));
 						}
 						discInfoVo.setFirstFlightISTomorrow(firstTds.get(8).getElementsByTag("span").get(0).text());
 						discInfoVo.setFirstFlightFlyHour(firstTds.get(8).getElementsByTag("span").get(1).text());
@@ -1243,8 +1243,8 @@ public class DhController {
 						if("隔日中转".equals(zhongzhuanall)){
 							discInfoVo.setXfirstFlightISTomorrowHour("0");
 						}else{
-							int m = zhongzhuanall.indexOf("中转 :");
-							discInfoVo.setXfirstFlightISTomorrowHour(zhongzhuanall.substring(m));
+							int m = zhongzhuanall.indexOf(":");
+							discInfoVo.setXfirstFlightISTomorrowHour(zhongzhuanall.substring(m+1));
 						}
 						discInfoVo.setXfirstFlightISTomorrow(thirdTds.get(8).getElementsByTag("span").get(0).text());
 						discInfoVo.setXfirstFlightFlyHour(thirdTds.get(8).getElementsByTag("span").get(1).text());
@@ -1303,7 +1303,16 @@ public class DhController {
 						discInfoVo.setFirstFlightStartFlyAddress(firstTds.get(5).text());
 						discInfoVo.setFirstFlightArrivedTime(firstTds.get(6).text());
 						discInfoVo.setFirstFlightArrivedAddress(firstTds.get(7).text());
+						//中转时间记录下来
+						String zhongzhuanall = firstTds.get(8).getElementsByTag("span").get(0).text();
+						if("隔日中转".equals(zhongzhuanall)){
+							discInfoVo.setFirstFlightISTomorrowHour("0");
+						}else{
+							int m = zhongzhuanall.indexOf(":");
+							discInfoVo.setFirstFlightISTomorrowHour(zhongzhuanall.substring(m+1));
+						}
 						discInfoVo.setFirstFlightISTomorrow(firstTds.get(8).getElementsByTag("span").get(0).text());
+						discInfoVo.setFirstFlightFlyHour(firstTds.get(8).getElementsByTag("span").get(1).text());
 						discInfoVo.setFirstFlightLeftSeat(firstTds.get(9).getElementsByTag("span").get(0).text());
 						discInfoVo.setFirstFlightSVGPrice(firstTds.get(10).getElementsByTag("strong").text());
 						String priceHtml = firstTds.get(12).getElementsByTag("input").attr("onclick");
