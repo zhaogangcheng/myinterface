@@ -377,7 +377,7 @@ public class DhController {
 		response.setCharacterEncoding("utf-8");
 		OutputStream os = null;
 		String directory = "excel"+ZipUtil.getRandomString(4);
-		String filePath = "E:\\zhanghan\\dhDownload\\"+directory +"\\";
+		String filePath = "E:\\zhanghan1\\dhDownload\\"+directory +"\\";
 		File iscunzai = new File(filePath);
 		//如果文件夹不存在则创建    
 		if  (!iscunzai.exists()  && !iscunzai.isDirectory())      
@@ -426,7 +426,7 @@ public class DhController {
 	        /** ========生成ctrip结束========**/
 	        
 	        logger.info("==生成excel完成，开始下载zip==");
-	        String zipPath = "E:\\zhanghan\\dhDownload\\zip\\";
+	        String zipPath = "E:\\zhanghan1\\dhDownload\\zip\\";
 	        //String dir = zipPath+resultFilname+".xls";
 	        String zipFileName = resultFilname+".zip";
 	        
