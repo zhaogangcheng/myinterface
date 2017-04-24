@@ -105,16 +105,22 @@ public class DhController {
 		if(isNeedLoginFlag){
 				try {
 					jsessionid = Login.getLoginJessionId(username,password);
-					int m = 0;
-					while("error".equals(jsessionid)){
-						++m;
-						if(m>=5){
-							Thread thread = new Thread();
-							thread.sleep(500);
+					for(int i=0;i<3;i++){
+						if("error".equals(jsessionid)){
+							jsessionid = Login.getLoginJessionId(username,password);
+						}else{
+							break;
 						}
-						jsessionid = Login.getLoginJessionId(username,password);
-					
 					}
+					
+					if("error".equals(jsessionid)){
+						logger.error("多次登录失败");
+						map.put("code", "400");
+						map.put("msg", "登录多次失败");
+						map.put("result", null);
+						return map;
+					}
+					
 					SessionVo	sv1 = new SessionVo();
 					sv1.setSessionDate(new Date());
 					sv1.setSessionId(jsessionid);
@@ -377,7 +383,7 @@ public class DhController {
 		response.setCharacterEncoding("utf-8");
 		OutputStream os = null;
 		String directory = "excel"+ZipUtil.getRandomString(4);
-		String filePath = "E:\\zhanghan1\\dhDownload\\"+directory +"\\";
+		String filePath = "E:\\zhanghan\\dhDownload\\"+directory +"\\";
 		File iscunzai = new File(filePath);
 		//如果文件夹不存在则创建    
 		if  (!iscunzai.exists()  && !iscunzai.isDirectory())      
@@ -426,7 +432,7 @@ public class DhController {
 	        /** ========生成ctrip结束========**/
 	        
 	        logger.info("==生成excel完成，开始下载zip==");
-	        String zipPath = "E:\\zhanghan1\\dhDownload\\zip\\";
+	        String zipPath = "E:\\zhanghan\\dhDownload\\zip\\";
 	        //String dir = zipPath+resultFilname+".xls";
 	        String zipFileName = resultFilname+".zip";
 	        
