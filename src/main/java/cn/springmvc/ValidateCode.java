@@ -442,7 +442,7 @@ public class ValidateCode {
                 System.out.println("验证码:"+result);
                 //BufferedImage read = ImageIO.read(new ByteArrayInputStream(tmp));
                 
-        		BufferedImage read = ImageIO.read(new FileInputStream(new File("D:\\yzm\\yzm.jpg")));
+        		BufferedImage read = ImageIO.read(new FileInputStream(new File("E:\\yzm\\yzm.jpg")));
         		//ImageIO.write(read, "jpg", new File("E:\\zhanghan\\yzm\\yzm.jpg"));
         		BufferedImage read2 = removeBackgroud1(read);
        		    read2 = grayImage(read2);

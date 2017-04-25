@@ -22,9 +22,13 @@ import cn.springmvc.ValidateCode;
 
 public class Login {
 	
+	private static int yzmCount = 0;
 	
 	public static String getLoginJessionId(String username, String password) throws Exception   
     {  
+		
+		++yzmCount;
+		System.out.println("====现在的yzmCount====："+yzmCount);
 		
 		 HttpClient httpClient = new HttpClient();
 		//获取图片下载 、同时获取图片的cookie
@@ -60,7 +64,7 @@ public class Login {
               
             String result = "";
 			try {
-				result = ValidateCode.OcrImage(new FileInputStream(new File("E:\\zhanghan\\yzm\\yzm.jpg")));
+				result = ValidateCode.OcrImage(new FileInputStream(new File("E:\\zhanghan\\yzm\\yzm"+yzmCount+".jpg")));
 			} catch (FileNotFoundException e) {
 				e.printStackTrace();
 			}
@@ -212,7 +216,7 @@ public static String getHomeSession( HttpClient httpClient, String loginsession)
 	                    System.out.println(" - " + cookies[i].toExternalForm());  
 	                }  
 	                */
-	                String picName = "E:\\zhanghan\\yzm\\yzm.jpg";  
+	                String picName = "E:\\zhanghan\\yzm\\yzm"+yzmCount+".jpg";  
 	                InputStream inputStream = getMethod.getResponseBodyAsStream();  
 	                OutputStream outStream = new FileOutputStream(picName);  
 	                IOUtils.copy(inputStream, outStream);  
