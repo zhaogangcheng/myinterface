@@ -141,17 +141,21 @@ public class DhController {
 		String retDate = vo.getRetDate();
 		String depAirpCd = vo.getDepAirpCd();
 		String arrAirpCd = vo.getArrAirpCd();
+		String cabinLevel = vo.getCabinLevel();
+		if(StringUtils.isBlank(cabinLevel)){
+			cabinLevel = "\"\"";
+		}
 		
 		List<InterfaceResultVo> allListResult = new LinkedList<InterfaceResultVo>();
 		if("ODOW".equals(routeType)){
-			List<DiscountFlightInfoVo> resultExcelList = getDomMsgSingle(depAirpCd,arrAirpCd,depDate,jsessionid);
+			List<DiscountFlightInfoVo> resultExcelList = getDomMsgSingle(cabinLevel,depAirpCd,arrAirpCd,depDate,jsessionid);
 			if(resultExcelList!=null){
 				allListResult = convertInterfaceResultSingle(resultExcelList);
 			}
 		//往返 ODRT
 		}else if("ODRT".equals(routeType)){
 			try {
-				List<InterfaceFlightVo> resultExcelList = getDomMsgInterfaceDouble(routeType,adtCount,depAirpCd,arrAirpCd,depDate,retDate,jsessionid);
+				List<InterfaceFlightVo> resultExcelList = getDomMsgInterfaceDouble(cabinLevel,routeType,adtCount,depAirpCd,arrAirpCd,depDate,retDate,jsessionid);
 				if(resultExcelList!=null){
 					allListResult = convertInterfaceResultDouble(resultExcelList);
 				}
@@ -268,7 +272,7 @@ public class DhController {
 		Date nowDate = new Date();
 		long seconds = nowDate.getTime() - oldDate.getTime();
 		long min = seconds/1000/60 ;
-		if(min>10){
+		if(min>5){
 			return true;
 		}
 		return false;
@@ -801,12 +805,12 @@ public class DhController {
 		return resultExcelList;
 	}
 	
-	public List<DiscountFlightInfoVo> getDomMsgSingle(String from, String arrive,String endDate,String jsessionid){
+	public List<DiscountFlightInfoVo> getDomMsgSingle(String cabinLevel, String from, String arrive,String endDate,String jsessionid){
 		String url =null;
 		String msg = "";
 		HttpConnectionClient httpClient = new HttpConnectionClient();
 		url = "http://781.ceair.com/bookingmanage/booking_bookodAjaxSearch.do?isIT=true";
-		NameValuePair[] nvps = {new NameValuePair("routeType", "ODOW"),new NameValuePair("flightOrder", "0"),new NameValuePair("cabinLevel", "\"\""),new NameValuePair("adtCount", "1"),new NameValuePair("kamno", "\"\""),new NameValuePair("retDate", "\"\""),new NameValuePair("depDate", endDate),new NameValuePair("arrAirpCd", arrive),new NameValuePair("depAirpCd", from),new NameValuePair("segIndex", "0") };
+		NameValuePair[] nvps = {new NameValuePair("routeType", "ODOW"),new NameValuePair("flightOrder", "0"),new NameValuePair("cabinLevel", cabinLevel),new NameValuePair("adtCount", "1"),new NameValuePair("kamno", "\"\""),new NameValuePair("retDate", "\"\""),new NameValuePair("depDate", endDate),new NameValuePair("arrAirpCd", arrive),new NameValuePair("depAirpCd", from),new NameValuePair("segIndex", "0") };
 		try{
 			msg= httpClient.getContextByPostMethod3(url,nvps,"JSESSIONID="+jsessionid);
 		}catch(Exception e){
@@ -839,13 +843,13 @@ public class DhController {
 		return resultList==null?new LinkedList<DiscountFlightInfoVo>():resultList;
 	}
 	
-	public List<InterfaceFlightVo> getDomMsgInterfaceDouble(String dancheng ,String renshu, String from, String arrive,String startdate,String endDate,String jsessionid){
+	public List<InterfaceFlightVo> getDomMsgInterfaceDouble(String cabinLevel, String dancheng ,String renshu, String from, String arrive,String startdate,String endDate,String jsessionid){
 		//List<ExcelVo> resultExcelList = new LinkedList<ExcelVo>();
 		String url =null;
 		String msg = "";
 		HttpConnectionClient httpClient = new HttpConnectionClient();
 		url = "http://781.ceair.com/bookingmanage/booking_bookodAjaxSearch.do?isIT=true";
-		NameValuePair[] nvps = {new NameValuePair("routeType", dancheng),new NameValuePair("flightOrder", "0"),new NameValuePair("cabinLevel", "\"\""),new NameValuePair("adtCount", renshu),new NameValuePair("kamno", "\"\""),new NameValuePair("retDate", endDate),new NameValuePair("depDate", startdate),new NameValuePair("arrAirpCd", arrive),new NameValuePair("depAirpCd", from),new NameValuePair("segIndex", "0") };
+		NameValuePair[] nvps = {new NameValuePair("routeType", dancheng),new NameValuePair("flightOrder", "0"),new NameValuePair("cabinLevel", cabinLevel),new NameValuePair("adtCount", renshu),new NameValuePair("kamno", "\"\""),new NameValuePair("retDate", endDate),new NameValuePair("depDate", startdate),new NameValuePair("arrAirpCd", arrive),new NameValuePair("depAirpCd", from),new NameValuePair("segIndex", "0") };
 		try{
 			msg= httpClient.getContextByPostMethod3(url,nvps,"JSESSIONID="+jsessionid);
 		}catch(Exception e){

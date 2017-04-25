@@ -25,6 +25,18 @@ public class InterfaceVo {
 	
 	//密码
 	private String password;
+	
+	//舱  ""不限    两舱 cabinLevel:F   cabinLevel:Y 经济舱
+	private String cabinLevel;
+	
+	
+	public String getCabinLevel() {
+		return cabinLevel;
+	}
+
+	public void setCabinLevel(String cabinLevel) {
+		this.cabinLevel = cabinLevel;
+	}
 
 	public String getRouteType() {
 		return routeType;
